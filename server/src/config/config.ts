@@ -12,9 +12,9 @@ export const config = {
   mongdb: {
     username: MONGDB_USERNAME,
     password: MONGDB_PASSWORD,
-    url: MONGDB_URL,
+    url: MONGDB_URL
   },
   server: {
-    port: PORT,
+    port: PORT
   },
 };

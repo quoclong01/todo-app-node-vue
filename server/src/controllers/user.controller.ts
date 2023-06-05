@@ -1,12 +1,23 @@
 import { Request, Response, NextFunction } from "express";
-import mongoose from "mongoose";
 import User from "../models/User";
+import { comparePassword, generateAccessToken } from "../lib/utils";
 
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
   const { email, name, password } = req.body;
 
+  const existUser = await User.findOne({ email });
+
+  if (existUser) {
+    return res.status(409).json({ errors: 'This email have already exist.' });
+  }
+
+  const existDisplayName = await User.findOne({ name });
+
+  if (existDisplayName) {
+    return res.status(408).json({ errors: 'Your display name is already taken.' });
+  }
+
   const user = new User({
-    _id: new mongoose.Types.ObjectId(),
     email,
     name,
     password
@@ -46,4 +57,30 @@ const getUserById = async (req: Request, res: Response, next: NextFunction) => {
     })
 }
 
-export default { createUser, getAllUser, getUserById };
+const loginUser = async (req: Request, res: Response, next: NextFunction) => {
+  const { email, password } = req.body;
+
+  // Validate user input
+  if (!(email && password)) {
+    res.status(400).send('All input is required');
+  }
+
+  const userTemp = await User.findOne({ email });
+  
+  if (!userTemp) {
+    return res.status(401).json({ message: 'Invalid email or password.' });
+  }
+
+  const isValidPassword = await comparePassword(password, userTemp.password);
+
+  if (!isValidPassword) {
+    return res.status(404).json({ message: 'Invalid email or password.' });
+  }
+
+  const token = await generateAccessToken(userTemp._id);
+  await userTemp.updateOne({ token });
+  
+  return res.status(201).json(userTemp);
+}
+
+export default { createUser, getAllUser, getUserById, loginUser };
